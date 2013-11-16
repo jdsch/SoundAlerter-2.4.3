@@ -1,14 +1,10 @@
 ﻿--[[
-SoundAlerter by Trolollolol
+SoundAlerter by Trolollolol and Schaka
 If you have any issues or concerns with the addon, Send me an ingame message at  
 Trolollolol - Realm:Ragnaros Server:Molten-WoW.com, or message me on the forums at
-http://forum.molten-wow.com/member.php?u=856331
-Known Bugs: 
--Server interrupt bug
- Bug report here: http://forum.molten-wow.com/bugtraq.php?do=view&vbug_id=10253
--Vanish bug - not reported yet but there is no combat log event for vanish for some reason.
+Schaka - Nextgen-WoW.com
 ]]
-SoundAlerter = LibStub("AceAddon-3.0"):NewAddon("SoundAlerter", "AceEvent-3.0","AceConsole-3.0","AceTimer-3.0")
+SoundAlerter = LibStub("AceAddon-3.0"):NewAddon("SoundAlerter", "AceEvent-3.0","AceConsole-3.0","AceTimer-3.0", "AceComm-3.0")
 
 local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 local AceConfig = LibStub("AceConfig-3.0")
@@ -18,6 +14,7 @@ local self ,SoundAlerter = SoundAlerter ,SoundAlerter
 local playerName = UnitName("player")
 local icondir = "\124TInterface\\Icons\\"
 local icondir2 = ".blp:24\124t"
+local GladdyGuidList = { }
 
 local getSpellDescription
 do
@@ -117,12 +114,14 @@ function SoundAlerter:OnInitialize()
 		end
 	end
 	self.db1 = LibStub("AceDB-3.0"):New("SoundAlerterDB",dbDefaults, "Default");
-	DEFAULT_CHAT_FRAME:AddMessage("|cffFF7D0ASoundAlerter|r for 4.3.4 by |cff0070DETrolollolol|r - Ragnaros - molten-wow.com - /SOUNDALERTER ");
+	DEFAULT_CHAT_FRAME:AddMessage("|cffFF7D0ASoundAlerter|r for 2.4.3 by |cff0070DETrolollolol|r backported by Schaka- /SOUNDALERTER ");
 	--DEFAULT_CHAT_FRAME:AddMessage(SA_TEXT .. SA_VERSION .. SA_AUTHOR .."  - /SA ");
 	--LibStub("AceConfig-3.0"):RegisterOptionsTable("SoundAlerter", SoundAlerter.Options, {"SoundAlerter", "SS"})
 	self:RegisterChatCommand("SoundAlerter", "ShowConfig")
 	self:RegisterChatCommand("SA", "ShowConfig")
 	self:RegisterChatCommand("SALERTER", "ShowConfig")
+	self:RegisterComm("GladdyTrinketUsed")
+	self:RegisterComm("Gladdy")
 	self.db1.RegisterCallback(self, "OnProfileChanged", "ChangeProfile")
 	self.db1.RegisterCallback(self, "OnProfileCopied", "ChangeProfile")
 	self.db1.RegisterCallback(self, "OnProfileReset", "ChangeProfile")
@@ -227,6 +226,56 @@ local function listOption(spellList, listType, ...)
 	end
 	return args
 end
+
+function debugTrinket()
+	SoundAlerter:COMBAT_LOG_EVENT_UNFILTERED("COMBAT_LOG_EVENT_UNFILTERED", 1000, "SPELL_CAST_SUCCESS", UnitGUID("player"), UnitName("player"), "noflags",  UnitGUID("player"),  UnitName("player"), "noflags", 42292, "PvP Trinket",  select(1, UnitClass("player")))
+end
+
+function SoundAlerter:OnCommReceived(prefix, message, dest, sender)
+--log(prefix.."  "..message.."  "..dest.."  "..sender)
+	if prefix == "GladdyTrinketUsed" then
+		local guid = string.upper(message)
+		local name
+		local class
+		local target = "none"
+		local focus = "none"
+		
+		if UnitGUID("target") ~= nil then
+			target = string.upper(UnitGUID("target"))
+		end
+		if UnitGUID("focus") ~= nil then
+			focus = string.upper(UnitGUID("focus"))
+		end
+		if sadb.class then
+			if target == guid then
+				name = UnitName("target")
+				class = select(1, UnitClass("target"))
+			elseif 	focus == guid then
+				name = UnitName("focus")
+				class = select(1, UnitClass("focus"))
+			elseif GladdyGuidList[guid] then	
+				name = GladdyGuidList[guid]["name"]
+				class = GladdyGuidList[guid]["class"]
+			else 
+				name = "no name"
+				class = "no class"
+			end
+		else
+		-- dummies
+			name =  "no name"
+			class = "no class"
+		end
+		--timestamp,event,sourceGUID,sourceName,sourceFlags,destGUID,destName,destFlags,spellID,spellName
+		SoundAlerter:COMBAT_LOG_EVENT_UNFILTERED("COMBAT_LOG_EVENT_UNFILTERED", 1000, "SPELL_CAST_SUCCESS", guid, name, "noflags", guid, name, "noflags", 42292, "PvP Trinket", class)
+	elseif prefix == "Gladdy" then -- register enemies sent to Gladdy
+		local name, guid, class, classLoc, raceLoc, spec, health, healthMax, power, powerMax, powerType = strsplit(',', message)
+		local enemy = {}
+		enemy["name"] = name
+		enemy["class"] = class
+		GladdyGuidList[guid] = enemy
+	end
+end
+
 function SoundAlerter:OnOptionsCreate()
 	
 	self:AddOption("profiles", LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db1))
@@ -374,13 +423,13 @@ function SoundAlerter:OnOptionsCreate()
 				inline = true,
 				order = -1,
 				args = {
-					aruaApplied = {
+					auraApplied = {
 						type = 'toggle',
 						name = L["Disable Enemy Buffs"],
 						desc = L["Disables sound alerts for enemies that gain buffs"],
 						order = 1,
 					},
-					aruaRemoved = {
+					auraRemoved = {
 						type = 'toggle',
 						name = L["Disable Enemy Buff Down"],
 						desc = L["Disables sound alerts for an enemies buff that has been taken off"],
@@ -422,7 +471,7 @@ function SoundAlerter:OnOptionsCreate()
 				type = 'group',
 				--inline = true,
 				name = L["Enemy Buffs"],
-				disabled = function() return sadb.aruaApplied end,
+				disabled = function() return sadb.auraApplied end,
 				order = 1,
 				args = {
 					aonlyTF = {
@@ -437,68 +486,75 @@ function SoundAlerter:OnOptionsCreate()
 						desc = L["Gives a sound alert when an enemy is drinking in arenas"],
 						order = 3,
 					},
-					--[[general = {
+					general = {
 						type = 'group',
 						inline = true,
 						name = L["General"],
 						order = 4,
-						args = listOption({42292,20594,7744},"auraApplied"),
-					},]]
+						args = listOption({26297,20594,20572,7744,28880,20594,7744},"auraApplied"),
+					},
 					druid = {
 						type = 'group',
 						inline = true,
 						name = L["|cffFF7D0ADruid|r"],
 						order = 5,
-						args = listOption({29166,22812,17116,16689,22842,5229,1850},"auraApplied"),	
+						args = listOption({29166,22812,17116,27009,26999,1850},"auraApplied"),	
 					},
 					paladin = {
 						type = 'group',
 						inline = true,
 						name = L["|cffF58CBAPaladin|r"],
 						order = 6,
-						args = listOption({31821,1022,1044,1020,6940,31884},"auraApplied"),
+						args = listOption({10278,1044,1020,27148,5573},"auraApplied"),
 					},
 					rogue = {
 						type = 'group',
 						inline = true,
 						name = L["|cffFFF569Rogue|r"],
 						order = 7,
-						args = listOption({2983,31224,13750,5277},"auraApplied"),
+						args = listOption({11305,31224,13750,26669},"auraApplied"),
 					},
 					warrior	= {
 						type = 'group',
 						inline = true,
 						name = L["|cffC79C6EWarrior|r"],
 						order = 8,
-						args = listOption({871,18499,20230,12975,23920,12328,12292,1719},"auraApplied"),	
+						args = listOption({12975,23920,12328,12292},"auraApplied"),	
 					},
 					priest	= {
 						type = 'group',
 						inline = true,
 						name = L["|cffFFFFFFPriest|r"],
 						order = 9,
-						args = listOption({33206,37274,6346},"auraApplied"),
+						args = listOption({33206,10060,6346},"auraApplied"),
 					},
 					shaman	= {
 						type = 'group',
 						inline = true,
 						name = L["|cff0070DEShaman|r"],
 						order = 10,
-						args = listOption({30823,974,16188,16166},"auraApplied"),
+						args = listOption({30823,974,16190,16188, 2825, 32182},"auraApplied"),
 					},
 					mage = {
 						type = 'group',
 						inline = true,
 						name = L["|cff69CCF0Mage|r"],
 						order = 11,
-						args = listOption({12042,12472,45438,12043},"auraApplied"),
+						args = listOption({45438,12042,12472,12043,28682},"auraApplied"),
 					},
 					hunter = {
 						type = 'group',
 						inline = true,
 						name = L["|cffABD473Hunter|r"],
 						order = 12,
-						args = listOption({34471,19263,3045},"auraApplied"),
+						args = listOption({34471,19263},"auraApplied"),
+					},
+					warlock = {
+						type = 'group',
+						inline = true,
+						name = L["|cff9482C9Warlock|r"],
+						order = 13,
+						args = listOption({17941, 18708},"auraApplied"),
 					},
 				},
 			},
@@ -506,7 +562,7 @@ function SoundAlerter:OnOptionsCreate()
 				type = 'group',
 				--inline = true,
 				name = L["Enemy Buff Down"],
-				disabled = function() return sadb.aruaRemoved end,
+				disabled = function() return sadb.auraRemoved end,
 				order = 2,
 				args = {
 					ronlyTF = {
@@ -541,7 +597,7 @@ function SoundAlerter:OnOptionsCreate()
 						inline = true,
 						name = L["|cffF58CBAPaladin|r"],
 						order = 5,
-						args = listOption({1022,1020},"auraRemoved"),
+						args = listOption({10278,1020},"auraRemoved"),
 					},
 					priest	= {
 						type = 'group',
@@ -555,14 +611,14 @@ function SoundAlerter:OnOptionsCreate()
 						inline = true,
 						name = L["|cffFFF569Rogue|r"],
 						order = 7,
-						args = listOption({31224,5277},"auraRemoved"),
+						args = listOption({31224,26669},"auraRemoved"),
 					},
 					warrior = {
 						type = 'group',
 						inline = true,
 						name = L["|cffC79C6EWarrior|r"],
 						order = 13,
-						args = listOption({12292,1719,871},"auraRemoved"),
+						args = listOption({12292,12975,23920},"auraRemoved"),
 					},
 				},
 			},
@@ -604,14 +660,14 @@ function SoundAlerter:OnOptionsCreate()
 						inline = true,
 						name = L["|cffFF7D0ADruid|r"],
 						order = 4,
-						args = listOption({2637,33786,2912},"castStart"),
+						args = listOption({18658,2637,33786},"castStart"),
 					},
-					preist	= {
+					priest	= {
 						type = 'group',
 						inline = true,
 						name = L["|cffFFFFFFPriest|r"],
 						order = 6,
-						args = listOption({8129,9484,605},"castStart"),
+						args = listOption({8129, 25380, 10912},"castStart"),
 					},
 				--[[	shaman	= { --2.4
 						type = 'group',
@@ -625,21 +681,21 @@ function SoundAlerter:OnOptionsCreate()
 						inline = true,
 						name = L["|cff69CCF0Mage|r"],
 						order = 8,
-						args = listOption({118},"castStart"),
+						args = listOption({118, 12826, 28272, 28271},"castStart"),
 					},
 					hunter = {
 						type = 'group',
 						inline = true,
 						name = L["|cffABD473Hunter|r"],
 						order = 9,
-						args = listOption({982,1513,19434},"castStart"),
+						args = listOption({982,1513,14327,27065},"castStart"),
 					},
 					warlock	= {
 						type = 'group',
 						inline = true,
 						name = L["|cff9482C9Warlock|r"],
 						order = 10,
-						args = listOption({5782,5484,710,691},"castStart"),
+						args = listOption({5782,6215,5484,17928,710,18647,688,691,712,697},"castStart"),
 					},
 				},
 			},
@@ -670,68 +726,68 @@ function SoundAlerter:OnOptionsCreate()
 						order = 4,
 						args = listOption({20572,26297,28880,20594,7744,42292,42292},"castSuccess"),
 					},
-					druid = {
+					--[[druid = {
 						type = 'group',
 						inline = true,
 						name = L["|cffFF7D0ADruid|r"],
 						order = 5,
 						args = listOption({740},"castSuccess"),
-					},
+					},]]
 					paladin = {
 						type = 'group',
 						inline = true,
 						name = L["|cffF58CBAPaladin|r"],
 						order = 6,
-						args = listOption({20066,853},"castSuccess"),
+						args = listOption({20066,10308},"castSuccess"),
 					},
 					rogue = {
 						type = 'group',
 						inline = true,
 						name = L["|cffFFF569Rogue|r"],
 						order = 7,
-						args = listOption({13877,2094,1766,14185,1856,14177,6770,1784},"castSuccess"),
+						args = listOption({11297,2094,1766,14185,26889,13877,1787},"castSuccess"),
 					},
 					warrior	= {
 						type = 'group',
 						inline = true,
 						name = L["|cffC79C6EWarrior|r"],
 						order = 8,
-						args = listOption({676,5246,6552,2457,71,2458,29704},"castSuccess"),	
+						args = listOption({2457,71,2458,676,5246,6552,72,29704},"castSuccess"),	
 					},
-					preist	= {
+					priest	= {
 						type = 'group',
 						inline = true,
 						name = L["|cffFFFFFFPriest|r"],
 						order = 9,
-						args = listOption({8122,34433,15487,19236},"castSuccess"),
+						args = listOption({10890,34433,25437,15487},"castSuccess"),
 					},
 					shaman	= {
 						type = 'group',
 						inline = true,
 						name = L["|cff0070DEShaman|r"],
 						order = 10,
-						args = listOption({8177,16190,8143},"castSuccess"),
+						args = listOption({2825,32182,8143,8177},"castSuccess"),
 					},
 					mage = {
 						type = 'group',
 						inline = true,
 						name = L["|cff69CCF0Mage|r"],
 						order = 11,
-						args = listOption({11129,11958,2139,66,12051},"castSuccess"),
+						args = listOption({12051,11958,2139,66},"castSuccess"),
 					},
 					hunter = {
 						type = 'group',
 						inline = true,
 						name = L["|cffABD473Hunter|r"],
 						order = 12,
-						args = listOption({19386,19503,34490,23989,1499},"castSuccess"),
+						args = listOption({23989, 19386,34490,27753,32419,13810,13809},"castSuccess"),
 					},
 					warlock = {
 						type = 'group',
 						inline = true,
 						name = L["|cff9482C9Warlock|r"],
 						order = 13,
-						args = listOption({6789,5484,19647},"castSuccess"),
+						args = listOption({17928,19647},"castSuccess"),
 					},
 				},
 			},
@@ -763,7 +819,7 @@ function SoundAlerter:OnOptionsCreate()
 						inline = true,
 						name = "The spell could be casted by anyone. Applies to target and focus only",
 						order = 1,
-						args = listOption({2094,6770,118,33786},"enemyDebuffs"),
+						args = listOption({2094,11297,12826,118,33786,5782,17928,6215},"enemyDebuffs"),
 					},
 				},
 			},
@@ -780,7 +836,7 @@ function SoundAlerter:OnOptionsCreate()
 						inline = true,
 						name = "The spell could be casted by anyone. Applies to target and focus only",
 						order = 1,
-						args = listOption({2094,6770,118,33786},"enemyDebuffdown"),
+						args = listOption({2094,11297,118,12826,33786,5782,17928,6215},"enemyDebuffdown"),
 					},
 				},
 			},
@@ -839,22 +895,28 @@ function SoundAlerter:OnOptionsCreate()
 								desc = "Enemies you cyclone will be alerted in chat",
 								order = 4,
 							},
-							hexchat = {
-								type = 'toggle',
-								name = icondir.."spell_shaman_hex"..icondir2.."Hex on Enemy",
-								desc = "Enemies you hex will be alerted in chat",
-								order = 5,
-							},
-							fearchat = {--5782
+							fearchat = {--5782, 6215?
 								type = 'toggle',
 								name = icondir.."spell_shadow_possession"..icondir2.."Fear on Enemy",
 								desc = "Enemies you fear will be alerted in chat",
-								order = 6,
+								order = 5,
+							},
+							fearalert = {--5782, 6215?
+								type = 'toggle',
+								name = icondir.."spell_shadow_possession"..icondir2.."Fear on Friend/Self",
+								desc = "Friends feared alerted in chat",
+								order = 5,
 							},
 							blindalert = {
 								type = 'toggle',
 								name = icondir.."Spell_Shadow_MindSteal"..icondir2.."Blind on Self/Friend",
 								desc = "Enemies that have blinded you will be alerted",
+								order = 6,
+							},
+							polyalert = {
+								type = 'toggle',
+								name = icondir.."Spell_Nature_Polymorph"..icondir2.."Poly on Self/Friend",
+								desc = "Enemies that have polied you will be alerted",
 								order = 7,
 							},
 							sapalert = {
@@ -867,27 +929,31 @@ function SoundAlerter:OnOptionsCreate()
 								type = 'toggle',
 								name = icondir.."ability_sap"..icondir2.."Sap on Enemy",
 								desc = "Enemies you sapped will be alerted",
-								order = 8,
+								order = 9,
+							},
+							polychat = {
+								type = 'toggle',
+								name = icondir.."Spell_Nature_Polymorph"..icondir2.."Poly on Enemy",
+								desc = "Enemies you polymorphed will be alerted",
+								order = 10,
 							},
 							bubblealert = {
-							type = 'toggle',
-							name = icondir.."Spell_Holy_DivineIntervention"..icondir2.."Divine Shield",
-							desc = "Enemies that have casted Divine Shield will be alerted",
-							order = 9,
+								type = 'toggle',
+								name = icondir.."Spell_Holy_DivineIntervention"..icondir2.."Divine Shield",
+								desc = "Enemies that have casted Divine Shield will be alerted",
+								order = 11,
 							},
 							trinketalert = {
 								type = 'toggle',
 								name = GetSpellInfo(42292),
-								desc = function ()
-									GameTooltip:SetHyperlink(GetSpellLink(42292));
-								end,
-								order = 10,
+								desc = "Enemies that used their PvP trinket will be alerted",
+								order = 12,
 							},
 							interruptalert = {
 								type = 'toggle',
 								name = "Interrupts on Target",
-								desc = "Alerts you if you have interrupted an enemys spell. Note: currently a server bug on Molten",
-								order = 11,
+								desc = "Alerts you if you have interrupted an enemys spell.",
+								order = 13,
 							},
 						},
 					},
@@ -933,11 +999,39 @@ function SoundAlerter:OnOptionsCreate()
 							},
 						},
 					},
+					polytextg = {
+						type = "group",
+						inline = true,
+						name = icondir.."Spell_Nature_Polymorph"..icondir2.."Polymorph on self",
+						order = 12,
+						args = {
+							polytext = {
+							type = "input",
+							name = "Note: The WoW client may not know who polied you, so don't use '#enemy#'",
+							order = 1,
+							width = "full",
+							},
+						},
+					},
+					fearextg = {
+						type = "group",
+						inline = true,
+						name = icondir.."spell_shadow_possession"..icondir2.."Fear on self",
+						order = 13,
+						args = {
+							feartext = {
+							type = "input",
+							name = "Note: The WoW client may not know who feared you, so don't use '#enemy#'",
+							order = 1,
+							width = "full",
+							},
+						},
+					},
 					blindtextg = {
 						type = "group",
 						inline = true,
 						name = icondir.."Spell_Shadow_MindSteal"..icondir2.."Blind on Self",
-						order = 12,
+						order = 14,
 						args = {
 							blindtext = {
 							type = "input",
@@ -951,7 +1045,7 @@ function SoundAlerter:OnOptionsCreate()
 						type = "group",
 						inline = true,
 						name = icondir.."ability_sap"..icondir2.."Sap on arena partner, target, or focus",
-						order = 13,
+						order = 15,
 						args = {
 							saptextfriend = {
 							type = "input",
@@ -965,7 +1059,7 @@ function SoundAlerter:OnOptionsCreate()
 						type = "group",
 						inline = true,
 						name = icondir.."Spell_Shadow_MindSteal"..icondir2.."Blind on arena partner, target, or focus",
-						order = 14,
+						order = 16,
 						args = {
 							blindtextfriend = {
 							type = "input",
@@ -975,11 +1069,39 @@ function SoundAlerter:OnOptionsCreate()
 							},
 						},
 					},
+					polytextfriendg = {
+						type = "group",
+						inline = true,
+						name = icondir.."Spell_Nature_Polymorph"..icondir2.."Poly on arena partner, target, or focus",
+						order = 17,
+						args = {
+							polytextfriend = {
+							type = "input",
+							name = "Example: '#friend# is afflicted by #spell#' = FriendName is afflicted by [Polymorph]",
+							order = 1,
+							width = "full",
+							},
+						},
+					},
+					feartextfriendg = {
+						type = "group",
+						inline = true,
+						name = icondir.."spell_shadow_possession"..icondir2.."Fear on arena partner, target, or focus",
+						order = 18,
+						args = {
+							feartextfriend = {
+							type = "input",
+							name = "Example: '#friend# is afflicted by #spell#' = FriendName is afflicted by [Fear]",
+							order = 1,
+							width = "full",
+							},
+						},
+					},
 					ccenemychatg = {
 						type = "group",
 						inline = true,
-						name = icondir.."spell_nature_earthbind"..icondir2.."Blind/Cyclone/Sap/Hex/Fear on enemy text",
-						order = 15,
+						name = icondir.."spell_nature_earthbind"..icondir2.."Blind/Cyclone/Sap/Fear/Poly on enemy text",
+						order = 19,
 						args = {
 							ccenemychat = {
 							type = "input",
@@ -993,7 +1115,7 @@ function SoundAlerter:OnOptionsCreate()
 						type = "group",
 						inline = true,
 						name = icondir.."Spell_Holy_DivineIntervention"..icondir2.."Bubble text",
-						order = 16,	
+						order = 20,	
 						args = {
 							bubblealerttext = {
 							type = 'input',
@@ -1003,11 +1125,11 @@ function SoundAlerter:OnOptionsCreate()
 							},
 						},
 					},
-				trinketalerttextg = {
+					trinketalerttextg = {
 						type = "group",
 						inline = true,
 						name = "PvP trinket text",
-						order = 17,	
+						order = 21,	
 						args = {
 							trinketalerttext = {
 							type = 'input',
@@ -1031,7 +1153,7 @@ function SoundAlerter:OnOptionsCreate()
 						inline = true,
 						name = "You will be alerted when an enemy is casting a spell to your arena partner",
 						order = 1,
-						args = listOption({118,33786,5782},"friendCCcast"),
+						args = listOption({118,33786,17928,5782, 6215, 12826, 28272, 28271},"friendCCcast"),
 						},
 					},
 			},
@@ -1047,7 +1169,7 @@ function SoundAlerter:OnOptionsCreate()
 						inline = true,
 						name = "You will be alerted when your friendly target, focus or arena partner has got CC'd",
 						order = 1,
-						args = listOption({2094,853,118,33786,5782,6770},"friendCCSuccess"),
+						args = listOption({2094,853,118,33786,5782, 6215 ,11297},"friendCCSuccess"),
 					},
 				}
 			}	
@@ -1246,6 +1368,18 @@ function SoundAlerter:PlaySpell(list, spellID, ...)
 	end	
 	PlaySoundFile("Interface\\Addons\\"..sadb.path.."\\"..list[spellID]..".ogg","Master");
 end
+
+local delaySpell = { }
+local delaySpellid = 0
+function SoundAlerter:trinketDelay(spell, spellid)
+	if spellid ~=nil and spell ~= nil then
+		delaySpell = spell
+		delaySpellid = spellid
+	else
+	self:PlaySpell (delaySpell, delaySpellid)
+	end
+end
+
 function SoundAlerter:COMBAT_LOG_EVENT_UNFILTERED(event , ...)
 --fix friend stunned, but enemy was stunned
 --silencing shot, scatter shot, fear3, mind freeze
@@ -1265,7 +1399,8 @@ local myFocus = UnitName("focus")
 		return
 	end
 	--local timestamp,event,hideCaster,sourceGUID,sourceName,sourceFlags,sourceFlags2,destGUID,destName,destFlags,destFlags2,spellID,spellName= select ( 1 , ... );
-	local timestamp,event,sourceGUID,sourceName,sourceFlags,destGUID,destName,destFlags,spellID,spellName = select ( 1 , ... );
+	local timestamp,event,sourceGUID,sourceName,sourceFlags,destGUID,destName,destFlags,spellID,spellName, class = select ( 1 , ... );
+	--log(timestamp.."  "..event.."  "..sourceGUID.."  "..sourceName.."  "..sourceFlags.."  "..destGUID.."  "..destName.."  "..destFlags.."  "..spellID.."  "..spellName.."  "..class)
 	--[[if sadb.debugmode then
 		log(" Spell Name: "..GetSpellLink(spellID)..", SpellID: "..spellID..", Source Name: "..(sourceName and sourceName or "Unknown")..", Destination Name: "..(destName and destName or "Unknown")..", Spell Event: "..event)
 	--	log("Spell detected from a hostile player = "..(desttype[COMBATLOG_FILTER_HOSTILE_PLAYERS] and "true" or "false"))
@@ -1361,9 +1496,9 @@ local myFocus = UnitName("focus")
 	end
 	sourceuid.any = true
 	if (event == "SPELL_AURA_APPLIED") then
-		if spellID == 6770 or spellID == 11297 or spellID == 12826 --[[polymorph rank 4]]or spellID == 2094 or spellID == 33786 or spellID == 51514 or spellID == 5782 then --sap/blind/cyclone/hex/fear chat & sound alerts	
+		if spellID == 6770 or spellID == 11297 or spellID == 12826  --[[polymorph rank 4]] or spellID == 118 or spellID == 28271 or spellID == 28272 or spellID == 2094 or spellID == 33786 or spellID == 51514 or spellID == 5782 or spellID == 6215 then --sap/blind/cyclone/poly/fear chat & sound alerts	
 				if destName == playerName then
-					if spellID == 33786 or spellID == 51514 or spellID == 5782 and not sadb.aruaApplied then
+					if spellID == 33786 or spellID == 5782 or spellID == 6215 and not sadb.auraApplied then -- Cyclone / Fear
 					self:PlaySpell (self.spellList.castStart,spellID)
 					end
 					self:PlaySpell (self.spellList.castSuccess,spellID)
@@ -1371,8 +1506,12 @@ local myFocus = UnitName("focus")
 						if (spellID == 6770 or spellID == 11297)and sadb.sapalert then
 							local saptext = gsub(sadb.saptext, "(#spell#)", GetSpellLink(spellID))--"I'm #spell#ped!"
 							SendChatMessage(saptext, sadb.chatgroup, nil, nil)
-						elseif spellID == 2094 and sadb.blindalert then
+						elseif spellID == 2094 and sadb.blindalert then -- blind
 							SendChatMessage(gsub(sadb.blindtext, "(#spell#)", GetSpellLink(spellID)), sadb.chatgroup, nil, nil)
+						elseif (spellID == 12826 or spellID == 118 or spellID == 28271 or spellID == 28272) and sadb.polyalert then -- poly
+							SendChatMessage(gsub(sadb.polytext, "(#spell#)", GetSpellLink(spellID)), sadb.chatgroup, nil, nil)
+						elseif (spellID == 5782 or spellID == 6215) then --fear 
+							SendChatMessage(gsub(sadb.feartext, "(#spell#)", GetSpellLink(spellID)), sadb.chatgroup, nil, nil)	
 						end
 					end
 				elseif (desttype[COMBATLOG_FILTER_FRIENDLY_UNITS] and destName ~= playerName and ((destuid.target or destuid.focus) or (currentZoneType == "arena"))) then
@@ -1380,23 +1519,33 @@ local myFocus = UnitName("focus")
 						self:PlaySpell (self.spellList.friendCCSuccess,spellID)
 						end
 					if not sadb.chatalerts then
-						if (spellID == 6770 or spellID == 11297)and sadb.sapalert then --blindonenemychat/blindalert
+						if (spellID == 6770 or spellID == 11297)and sadb.sapalert then --this worked by default, everything below didn't / replacing "(#friend#)" with destName did nothing either
 							local saptextfriend = gsub(sadb.saptextfriend, "(#spell#)", GetSpellLink(spellID))
 							SendChatMessage(gsub(sadb.saptextfriend, "(#friend#)", destName), sadb.chatgroup, nil, nil)
 						elseif spellID == 2094 and sadb.blindalert then
-							SendChatMessage(string.format(sadb.blindtextfriend, destName, GetSpellLink(spellID)), sadb.chatgroup, nil, nil)
+							local blindtextfriend = gsub(sadb.blindtextfriend, "(#spell#)", GetSpellLink(spellID))
+							SendChatMessage(gsub(sadb.blindtextfriend, "(#friend#)", destName), sadb.chatgroup, nil, nil)
+							--SendChatMessage(string.format(sadb.blindtextfriend, "(#friend#)", GetSpellLink(spellID)), sadb.chatgroup, nil, nil)
+						elseif (spellID == 12826 or spellID == 118 or spellID == 28271 or spellID == 28272) and sadb.polyalert then -- poly // same as sap?
+							local polytextfriend = gsub(sadb.polytextfriend, "(#spell#)", GetSpellLink(spellID))
+							SendChatMessage(gsub(sadb.polytextfriend, "(#friend#)", destName), sadb.chatgroup, nil, nil)
+							--SendChatMessage(gsub(sadb.polytextfriend, "(#friend#)", GetSpellLink(spellID)), sadb.chatgroup, nil, nil)
+						elseif (spellID == 5782 or spellID == 6215) then
+							local feartextfriend = gsub(sadb.feartextfriend, "(#spell#)", GetSpellLink(spellID))
+							SendChatMessage(gsub(sadb.feartextfriend, "(#friend#)", destName), sadb.chatgroup, nil, nil)
+							--SendChatMessage(gsub(sadb.feartextfriend, "(#friend#)", GetSpellLink(spellID)), sadb.chatgroup, nil, nil)
 						end
 					end
 				elseif desttype[COMBATLOG_FILTER_HOSTILE_PLAYERS] and (destuid.target or destuid.focus) then
 						self:PlaySpell (self.spellList.enemyDebuffs,spellID)
 					if not sadb.chatalerts then
-						if ((spellID == 6770 or spellID == 11297) and sadb.sapenemyalert) or (spellID == 2094 and sadb.blindonenemychat) or (spellID == 33786 and sadb.cyclonechat) or (spellID == 51514 and sadb.hexchat) or (spellID == 5782 and sadb.fearchat) then
+						if ((spellID == 6770 or spellID == 11297) and sadb.sapenemyalert) or (spellID == 2094 and sadb.blindonenemychat) or (spellID == 33786 and sadb.cyclonechat) or ((spellID == 5782 or spellID == 6215) and sadb.fearchat) or ((spellID == 12826 or spellID == 118 or spellID == 28271 or spellID == 28272) and sadb.polychat) then
 						local ccenemychat = gsub(sadb.ccenemychat, "(#spell#)", GetSpellLink(spellID))
 						SendChatMessage(gsub(ccenemychat, "(#enemy#)", destName), sadb.chatgroup, nil, nil)
 						end
 					end
 				end
-		elseif not sadb.aruaApplied then
+		elseif not sadb.auraApplied then
 				if destName == PlayerName then --Also includes buffs e.g "Cold Snap" - Should I leave this?
 								self:PlaySpell (self.spellList.castSuccess,spellID)
 								self:PlaySpell (self.spellList.castStart,spellID)
@@ -1416,13 +1565,13 @@ local myFocus = UnitName("focus")
 			self:PlaySpell (self.spellList.auraRemoved,spellID)
 		end
 	elseif (event == "SPELL_CAST_START" and sourcetype[COMBATLOG_FILTER_HOSTILE_PLAYERS] and (not sadb.conlyTF or sourceuid.target or sourceuid.focus) and not sadb.castStart) then
-		if currentZoneType == "arena" and (arena1 ~= playerName and arena2 ~= playerName and arena3 ~= playerName and arena4 ~= playerName and arena5 ~= playerName) and (spellID == 33786 or spellID == 51514 or spellID == 118 or spellID == 28272 or spellID == 61305 or spellID == 61721 or spellID == 61025 or spellID == 61780 or spellID == 28271 or spellID == 5782) and not sadb.ArenaPartner then
+		if currentZoneType == "arena" and (spellID == 33786 or spellID == 118 or spellID == 28272 or spellID == 28271 or spellID == 5782 or spellID == 6215) and not sadb.ArenaPartner and destName ~= playerName then -- fear, cyclone, poly
 		self:PlaySpell (self.spellList.friendCCcast,spellID)
 		else
 		self:PlaySpell (self.spellList.castStart,spellID)
 		end
 	--elseif event == "SPELL_CAST_SUCCESS" and sourceName == playerName and destName ~= playerName or ((sourceName == party1 or sourceName == party2 or sourceName == party3 or sourceName == party4) and (ZoneType == "arena")) then
-	elseif (event == "SPELL_CAST_SUCCESS" and sourcetype[COMBATLOG_FILTER_HOSTILE_PLAYERS]) then
+	elseif (event == "SPELL_CAST_SUCCESS" and sourcetype[COMBATLOG_FILTER_HOSTILE_PLAYERS]) or (event == "SPELL_CAST_SUCCESS" and spellID == 42292) then
 		if ((spellID == 1784 or spellID == 1787 or spellID == 1856 or spellID == 642) and (not sadb.sonlyTF or sourceuid.target or sourceuid.focus) and not sadb.castSuccess) then --vanish/stealth chat alert
 				self:PlaySpell (self.spellList.castSuccess,spellID)
 				if not sadb.chatalerts and (not sadb.caonlyTF or sourceuid.target or sourceuid.focus) then
@@ -1432,24 +1581,27 @@ local myFocus = UnitName("focus")
 					else
 					local bubblealerttext = gsub(sadb.bubblealerttext, "(#spell#)", GetSpellLink(spellID))
 					SendChatMessage(gsub(sadb.bubblealerttext, "(#enemy#)", sourceName), sadb.chatgroup, nil, nil)
-				end	
-			end
+					end	
+				end
 		elseif (spellID == 42292) then--FIXME - no trinket combat log event??
 			if sadb.trinketalert and not sadb.chatalerts and (not sadb.caonlyTF or sourceuid.target or sourceuid.focus) then
 				local trinketalerttext = gsub(sadb.trinketalerttext, "(#spell#)", GetSpellLink(spellID))
 					SendChatMessage(gsub(trinketalerttext, "(#enemy#)", sourceName), sadb.chatgroup, nil, nil)
 			end
-			if sadb.class and currentZoneType == "arena" then
-				local c = self:ArenaClass(sourceGUID)
-				if c then 
+			if sadb.class --[[and currentZoneType == "arena"]] then
+				local c = class
+				if c then			
 					PlaySoundFile("Interface\\Addons\\"..sadb.path.."\\"..c..".ogg","Master");
+					self:trinketDelay(self.spellList.castSuccess,spellID) -- sets values needed for PlaySpell()
+					--self:PlaySpell (self.spellList.castSuccess,spellID)
+					self:ScheduleTimer("trinketDelay", 0.5)	-- delay to make "class trinketed" not appear at the same time	
 				end
 			elseif (not sadb.sonlyTF or sourceuid.target or sourceuid.focus) then
 			self:PlaySpell (self.spellList.castSuccess,spellID)
 			end
 		elseif spellID ~= 6770 and spellID ~= 11297 and spellID ~= 2094 and (not sadb.sonlyTF or sourceuid.target or sourceuid.focus) then	--to prevent double spam in party 
 			self:PlaySpell (self.spellList.castSuccess,spellID)
-		end
+		end	
 	elseif (event == "SPELL_INTERRUPT" and desttype[COMBATLOG_FILTER_HOSTILE_PLAYERS] and not sadb.interrupt) then 
 		self:PlaySpell (self.spellList.friendlyInterrupt,spellID)
 	end

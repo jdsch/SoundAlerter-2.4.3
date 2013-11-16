@@ -1,7 +1,7 @@
-﻿## Interface: 40300
+﻿## Interface: 20400
 ## Title: SoundAlerter
 ## Notes: PVP Spell Sound Alert
-## Author: Trolollolol, Abatorlos(of Spinebreaker), DuskAshes, superk521
+## Author: Trolollolol, Abatorlos(of Spinebreaker), DuskAshes, superk521, Schaka
 ## SavedVariables: SoundAlerterDB
 ## Version: v1.0
 

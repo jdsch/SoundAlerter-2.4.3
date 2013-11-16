@@ -4,4 +4,5 @@ SA_sponsors = {
 	["C"] = "Official Contributer of SoundAlerter",
 --devs
 ["Unholysunday"] = { ["Realm"] = "Archangel [14x] Blizzlike", ["Type"] = "A" },	
+["Schaka"] = { ["Realm"] = "Next Generation", ["Type"] = "A" },	
 	}
