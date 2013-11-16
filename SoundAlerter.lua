@@ -51,13 +51,11 @@ function SoundAlerter:GetSpellDescription(spellID)
 end
 
 SA_LOCALEPATH = {
-	enUS = "SoundAlerter\\Voice_enUS",
-	zhTW = "SoundAlerter\\Voice",
-	zhCN = "SoundAlerter\\Voice"
+	enUS = "Interface\\Addons\\SoundAlerter\\Voice_enUS\\"
 }
 self.SA_LOCALEPATH = SA_LOCALEPATH
 local SA_LANGUAGE = {
-	["SoundAlerter\\Voice_enUS"] = L["English (Female)"],
+	["Interface\\Addons\\SoundAlerter\\Voice_enUS\\"] = L["English (Female)"]
 }
 local SA_CHATGROUP = {
 	["SAY"] = L["Say"],
@@ -190,7 +188,7 @@ local function setOption(info, value)
 	local name = info[#info]
 	sadb[name] = value
 	if value then 
-		PlaySoundFile("Interface\\Addons\\"..sadb.path.."\\"..name..".ogg","Master");
+		PlaySoundFile(sadb.path..name..".ogg","Master");
 	end
 end
 local function getOption(info)
@@ -222,7 +220,7 @@ end
 local function listOption(spellList, listType, ...)
 	local args = {}
 	for k,v in pairs(spellList) do
-		rawset (args, self.spellList[listType][v] ,spellOption(k, v))
+		rawset(args, self.spellList[listType][v] ,spellOption(k, v))
 	end
 	return args
 end
@@ -277,7 +275,6 @@ function SoundAlerter:OnCommReceived(prefix, message, dest, sender)
 end
 
 function SoundAlerter:OnOptionsCreate()
-	
 	self:AddOption("profiles", LibStub("AceDBOptions-3.0"):GetOptionsTable(self.db1))
 	self.options.args.profiles.order = -1
 	self:AddOption('genaral', {
@@ -1332,7 +1329,7 @@ function SoundAlerter:OnOptionsCreate()
 end
 
 function SoundAlerter:PlayTrinket()
-	PlaySoundFile("Interface\\Addons\\"..sadb.path.."\\Trinket.ogg","Master")
+	PlaySoundFile(sadb.path.."Trinket.ogg","Master")
 end
 function SoundAlerter:ArenaClass(id)
 	for i = 1 , 5 do
@@ -1366,7 +1363,7 @@ function SoundAlerter:PlaySpell(list, spellID, ...)
 	if sadb.debugmode then
 		self:Print("<SA> DEBUG: Playing sound file: "..list[spellID]..".ogg");
 	end	
-	PlaySoundFile("Interface\\Addons\\"..sadb.path.."\\"..list[spellID]..".ogg","Master");
+	PlaySoundFile(sadb.path..list[spellID]..".ogg","Master");
 end
 
 local delaySpell = { }
@@ -1591,7 +1588,7 @@ local myFocus = UnitName("focus")
 			if sadb.class --[[and currentZoneType == "arena"]] then
 				local c = class
 				if c then			
-					PlaySoundFile("Interface\\Addons\\"..sadb.path.."\\"..c..".ogg","Master");
+					PlaySoundFile(sadb.path..c..".ogg","Master");
 					self:trinketDelay(self.spellList.castSuccess,spellID) -- sets values needed for PlaySpell()
 					--self:PlaySpell (self.spellList.castSuccess,spellID)
 					self:ScheduleTimer("trinketDelay", 0.5)	-- delay to make "class trinketed" not appear at the same time	
