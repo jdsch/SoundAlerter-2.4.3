@@ -220,7 +220,9 @@ end
 local function listOption(spellList, listType, ...)
 	local args = {}
 	for k,v in pairs(spellList) do
-		rawset(args, self.spellList[listType][v] ,spellOption(k, v))
+		if self.spellList[listType][v] then
+			rawset(args, self.spellList[listType][v] ,spellOption(k, v))
+		end
 	end
 	return args
 end
@@ -1493,7 +1495,8 @@ local myFocus = UnitName("focus")
 	end
 	sourceuid.any = true
 	if (event == "SPELL_AURA_APPLIED") then
-		if spellID == 6770 or spellID == 11297 or spellID == 12826  --[[polymorph rank 4]] or spellID == 118 or spellID == 28271 or spellID == 28272 or spellID == 2094 or spellID == 33786 or spellID == 51514 or spellID == 5782 or spellID == 6215 then --sap/blind/cyclone/poly/fear chat & sound alerts	
+		--sap/blind/cyclone/poly/fear chat & sound alerts
+		if spellID == 6770 or spellID == 11297 or spellID == 12826  --[[polymorph rank 4]] or spellID == 118 or spellID == 28271 or spellID == 28272 or spellID == 2094 or spellID == 33786 or spellID == 5782 or spellID == 6215 then 
 				if destName == playerName then
 					if spellID == 33786 or spellID == 5782 or spellID == 6215 and not sadb.auraApplied then -- Cyclone / Fear
 					self:PlaySpell (self.spellList.castStart,spellID)

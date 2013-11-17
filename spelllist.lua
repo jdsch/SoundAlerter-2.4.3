@@ -1,4 +1,4 @@
-function SoundAlerter:GetSpellList () 
+function SoundAlerter:GetSpellList ()
 	return {
 		auraApplied = {					-- aura applied [spellid] = ".mp3 file name",
 			--Races
@@ -22,7 +22,7 @@ function SoundAlerter:GetSpellList ()
 			[1044] = "handOfFreedom",
 			[1020] = "divineShield",
 			[27148] = "Sacrifice",
-			[5573] = "divineprotection", -- no sound
+			[5573] = "divineprotection", -- fix ogg
 			[31884] = "AvengingWrath",
 			--Rogue
 			[11305] = "sprint",
@@ -58,8 +58,8 @@ function SoundAlerter:GetSpellList ()
 			[34471] = "theBeastWithin",
 			[19263] = "deterrence",	
 			--Warlock
-			[17941] = "shadowtrance",
-			[18708] = "Feldom",
+			[17941] = "shadowtrance", --need ogg
+			[18708] = "Feldom", --fix ogg
 		},
 		auraRemoved = {
 			--Warrior
@@ -169,6 +169,7 @@ function SoundAlerter:GetSpellList ()
 			--[31884] = "AvengingWrath", --works
 			--rogue
 			[11297] = "sap", --works
+			[6770] = "sap",
 			[2094] = "blind", --works
 			[1766] = "kick", --works
 			[14185] = "preparation", --works
@@ -199,7 +200,7 @@ function SoundAlerter:GetSpellList ()
 		enemyDebuffs = {
 			[2094] = "Enemyblinded", --works
 			[11297] = "Enemysapped", --works
-			[12826] = "EnemyPollied",
+			[6770] = "Enemysapped",
 			[118] = "EnemyPollied", -- rank 1 polymorph
 			[12826] = "EnemyPollied", -- rank 4 polymorph
 			[28272] = "EnemyPollied", -- polymorph pig
@@ -213,6 +214,7 @@ function SoundAlerter:GetSpellList ()
 		enemyDebuffdown = {
 			[2094] = "BlindDown", --works
 			[11297] = "sapdown", --works
+			[6770] = "sapdown",
 			[118] = "polydown",
 			[12826] = "polydown",
 			[28272] = "polydown", -- polymorph pig
@@ -244,7 +246,6 @@ function SoundAlerter:GetSpellList ()
 			[14309] = "friendfrozen",
 			[2094] = "BlindFriend",
 			[5246] = "friendfeared", --intimidating shout
-			[11297] = "friendsapped",
 			[33786] = "friendcycloned",
 			[10308] = "friendstunned",
 			[2139] = "friendcountered",
@@ -258,10 +259,12 @@ function SoundAlerter:GetSpellList ()
 			[853] = "friendstunned",
 			[5782] = "friendfeared",
 			[11297] = "friendsapped",
+			[6770] = "friendsapped",
 		},
 		friendCCenemy = {
 			[2094] = "EnemyBlinded",
 			[11297] = "EnemySapped",
+			[6770] = "EnemySapped",
 			[12826] = "Enemypollied",
 			[118] = "Enemypollied",
 			[28272] = "EnemyPollied", -- polymorph pig
@@ -274,6 +277,7 @@ function SoundAlerter:GetSpellList ()
 		friendCCenemyDown = {
 			[2094] = "BlindDown",
 			[11297] = "sapdown",
+			[6770] = "sapdown",
 			[12826] = "polydown",
 			[118] = "polydown",
 			[28272] = "polydown", -- polymorph pig
